@@ -472,8 +472,8 @@ static int ptrace_attach(struct task_struct *task, long request,
 
 	ptrace_link(task, current);
 
-	initialize_snapshot_list(child);
-	child->total_snapshot_size = 0;  // Initialize total snapshot size
+	initialize_snapshot_list(task);
+	task->total_snapshot_size = 0;  // Initialize total snapshot size
 
 	/* SEIZE doesn't trap tracee on attach */
 	if (!seize)
@@ -1062,6 +1062,7 @@ int ptrace_request(struct task_struct *child, long request,
 	void __user *datavp = (void __user *) data;
 	unsigned long __user *datalp = datavp;
 	unsigned long flags;
+	struct snapshot *snap;
 
 	switch (request) {
 	case PTRACE_PEEKTEXT:
@@ -1073,6 +1074,7 @@ int ptrace_request(struct task_struct *child, long request,
 	
 	/* TODO: */
 	case PTRACE_SNAPSHOT:
+		size_t length = (size_t) data;	// TODO: I don't understand what data is
 
 		// Check if the requested snapshot length exceeds the maximum allowed size
 		if (length > MAX_SNAPSHOT_LEN) {
@@ -1086,7 +1088,7 @@ int ptrace_request(struct task_struct *child, long request,
 		}
 
 		// Allocate kernel space to store the snapshot
-		struct snapshot *snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
+		snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
 		if (!snap) {
 			ret = -ENOMEM;  // Memory allocation failure
 			break;
