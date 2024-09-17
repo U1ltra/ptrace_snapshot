@@ -142,5 +142,8 @@ struct ptrace_syscall_info {
 
 #include <asm/ptrace.h>
 
+#define PTRACE_SNAPSHOT     0x5001
+#define PTRACE_RESTORE      0x5002
+#define PTRACE_GETSNAPSHOT  0x5003
 
 #endif /* _UAPI_LINUX_PTRACE_H */
