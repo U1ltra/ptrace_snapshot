@@ -34,6 +34,11 @@
 
 #include <asm/syscall.h>	/* for syscall_get_* */
 
+
+// Define snapshot limits
+#define MAX_SNAPSHOT_LEN 1024   // Maximum length of a single snapshot (e.g., 1024 bytes)
+#define MAX_TOTAL_SNAPSHOT_SIZE (10 * 1024)  // Maximum total size of all snapshots for a tracee (e.g., 10 KB)
+
 /* 
   Data structures and functions for the snapshot feature
  */
@@ -468,6 +473,7 @@ static int ptrace_attach(struct task_struct *task, long request,
 	ptrace_link(task, current);
 
 	initialize_snapshot_list(child);
+	child->total_snapshot_size = 0;  // Initialize total snapshot size
 
 	/* SEIZE doesn't trap tracee on attach */
 	if (!seize)
@@ -541,6 +547,10 @@ static int ptrace_traceme(void)
 		if (!ret && !(current->real_parent->flags & PF_EXITING)) {
 			current->ptrace = PT_PTRACED;
 			ptrace_link(current, current->real_parent);
+
+			// Initialize the snapshot-related fields
+			initialize_snapshot_list(current);
+			current->total_snapshot_size = 0;  // Initialize total snapshot size
 		}
 	}
 	write_unlock_irq(&tasklist_lock);
@@ -1063,6 +1073,18 @@ int ptrace_request(struct task_struct *child, long request,
 	
 	/* TODO: */
 	case PTRACE_SNAPSHOT:
+
+		// Check if the requested snapshot length exceeds the maximum allowed size
+		if (length > MAX_SNAPSHOT_LEN) {
+			ret = -EFBIG;  // Snapshot size too large
+			break;
+		}
+		// Check if adding this snapshot would exceed the total allowed size for this tracee
+		if (child->total_snapshot_size + length > MAX_TOTAL_SNAPSHOT_SIZE) {
+			ret = -ENOMEM;  // Total snapshot size limit exceeded
+			break;
+		}
+
 		// Allocate kernel space to store the snapshot
 		struct snapshot *snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
 		if (!snap) {
@@ -1093,6 +1115,9 @@ int ptrace_request(struct task_struct *child, long request,
 		// Add the snapshot to the list, still in the kernel space
 		// just moving the dynamic memory address around
 		list_add(&snap->list, &child->snapshots.head);
+
+		// Update the total snapshot size for the tracee
+    	child->total_snapshot_size += length;
 		
 		ret = 0;
 		break;

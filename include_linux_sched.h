@@ -645,6 +645,7 @@ struct wake_q_node {
 };
 
 struct task_struct {
+	size_t total_snapshot_size;  // Track the total size of all snapshots for this tracee
 	struct snapshot_list 	snapshots;
 
 #ifdef CONFIG_THREAD_INFO_IN_TASK
