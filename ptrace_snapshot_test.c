@@ -72,52 +72,24 @@ int main() {
             printf("Enter the target address of the memory region to snapshot: ");
             scanf("%lx", &target_addr);
 
-            // Use PTRACE_ATTACH to attach to the child process
-            if (ptrace(PTRACE_ATTACH, child_pid, NULL, NULL) == -1) {
-                perror("ptrace ATTACH");
+
+            printf("Parent: Child stopped after attach. Taking snapshot...\n");
+
+            // Perform PTRACE_SNAPSHOT
+            ret = ptrace(PTRACE_SNAPSHOT, child_pid, target_addr, SNAPSHOT_SIZE);
+            if (ret == -1) {
+                perror("ptrace SNAPSHOT");
                 exit(EXIT_FAILURE);
             }
 
-            waitpid(child_pid, &status, 0); // Wait for child to stop again
+            printf("Parent: Snapshot taken successfully.\n");
 
-            if (WIFSTOPPED(status)) {
-                printf("Parent: Child stopped after attach. Taking snapshot...\n");
-
-                // Perform PTRACE_SNAPSHOT
-                ret = ptrace(PTRACE_SNAPSHOT, child_pid, target_addr, SNAPSHOT_SIZE);
-                if (ret == -1) {
-                    perror("ptrace SNAPSHOT");
-                    exit(EXIT_FAILURE);
-                }
-
-                printf("Parent: Snapshot taken successfully.\n");
-
-                // To test, read back the snapshot data (optional, based on your implementation)
-                ret = ptrace(PTRACE_GETSNAPSHOT, child_pid, snapshot_data, SNAPSHOT_SIZE);
-                if (ret == -1) {
-                    perror("ptrace GETSNAPSHOT");
-                    exit(EXIT_FAILURE);
-                }
-
-                printf("Parent: Snapshot data retrieved successfully.\n");
-
-                // Optionally compare the data (this step would depend on how you designed your snapshot feature)
-                for (int i = 0; i < SNAPSHOT_SIZE; i++) {
-                    if (snapshot_data[i] != (unsigned char)(i + 1)) {
-                        printf("Mismatch at byte %d: Expected %x, Found %x\n", i, (unsigned char)(i + 1), snapshot_data[i]);
-                        break;
-                    }
-                }
-
-                printf("Parent: Data comparison complete. Snapshot functionality verified.\n");
-
-                // Detach from the child process
-                if (ptrace(PTRACE_DETACH, child_pid, NULL, NULL) == -1) {
-                    perror("ptrace DETACH");
-                    exit(EXIT_FAILURE);
-                }
-                printf("Parent: Detached from child.\n");
+            // Detach from the child process
+            if (ptrace(PTRACE_DETACH, child_pid, NULL, NULL) == -1) {
+                perror("ptrace DETACH");
+                exit(EXIT_FAILURE);
             }
+            printf("Parent: Detached from child.\n");
         }
     }
 
