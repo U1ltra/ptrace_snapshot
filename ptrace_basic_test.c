@@ -48,65 +48,37 @@ int main() {
         waitpid(child_pid, &status, 0); // Wait for child to stop
 
         if (WIFSTOPPED(status)) {
-            printf("Parent: Child stopped, now attaching...\n");
+            
+            printf("Parent: Child stopped after attach. Testing ptrace...\n");
 
-            // Use PTRACE_ATTACH to attach to the child process
-            if (ptrace(PTRACE_ATTACH, child_pid, NULL, NULL) == -1) {
-                perror("ptrace ATTACH");
+            // Read a word from child's memory
+            addr = regs.sp; // Let's use the stack pointer as an example address
+            ret = ptrace(PTRACE_PEEKDATA, child_pid, (void *)addr, NULL);
+            if (ret == -1 && errno != 0) {
+                perror("ptrace PEEKDATA");
+                exit(EXIT_FAILURE);
+            }
+            printf("Parent: Read word from child's stack (address %lx) = %lx\n", addr, ret);
+
+            // Write a new word to child's memory
+            data = 0x12345678; // Example data
+            ret = ptrace(PTRACE_POKEDATA, child_pid, (void *)addr, (void *)data);
+            if (ret == -1) {
+                perror("ptrace POKEDATA");
+                exit(EXIT_FAILURE);
+            }
+            printf("Parent: Wrote word to child's stack (address %lx) = %lx\n", addr, data);
+
+            // Continue the child process
+            if (ptrace(PTRACE_CONT, child_pid, NULL, NULL) == -1) {
+                perror("ptrace CONT");
                 exit(EXIT_FAILURE);
             }
 
-            waitpid(child_pid, &status, 0); // Wait for child to stop again
-
-            if (WIFSTOPPED(status)) {
-                printf("Parent: Child stopped after attach. Testing ptrace...\n");
-
-                // Get the child process's registers
-                ret = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-                if (ret == -1) {
-                    perror("ptrace GETREGS");
-                    exit(EXIT_FAILURE);
-                }
-                printf("Parent: Original RIP = %llx\n", regs.rip);
-
-                // Modify the child's instruction pointer (RIP)
-                regs.rip += 2; // Increment RIP by 2 bytes for demonstration
-                ret = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-                if (ret == -1) {
-                    perror("ptrace SETREGS");
-                    exit(EXIT_FAILURE);
-                }
-                printf("Parent: Modified RIP to = %llx\n", regs.rip);
-
-                // Read a word from child's memory
-                addr = regs.rsp; // Let's use the stack pointer as an example address
-                ret = ptrace(PTRACE_PEEKDATA, child_pid, (void *)addr, NULL);
-                if (ret == -1 && errno != 0) {
-                    perror("ptrace PEEKDATA");
-                    exit(EXIT_FAILURE);
-                }
-                printf("Parent: Read word from child's stack (address %lx) = %lx\n", addr, ret);
-
-                // Write a new word to child's memory
-                data = 0x12345678; // Example data
-                ret = ptrace(PTRACE_POKEDATA, child_pid, (void *)addr, (void *)data);
-                if (ret == -1) {
-                    perror("ptrace POKEDATA");
-                    exit(EXIT_FAILURE);
-                }
-                printf("Parent: Wrote word to child's stack (address %lx) = %lx\n", addr, data);
-
-                // Continue the child process
-                if (ptrace(PTRACE_CONT, child_pid, NULL, NULL) == -1) {
-                    perror("ptrace CONT");
-                    exit(EXIT_FAILURE);
-                }
-
-                // Wait for the child to finish
-                waitpid(child_pid, &status, 0);
-                if (WIFEXITED(status)) {
-                    printf("Parent: Child exited with status %d.\n", WEXITSTATUS(status));
-                }
+            // Wait for the child to finish
+            waitpid(child_pid, &status, 0);
+            if (WIFEXITED(status)) {
+                printf("Parent: Child exited with status %d.\n", WEXITSTATUS(status));
             }
         }
     }
