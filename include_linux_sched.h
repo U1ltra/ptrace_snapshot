@@ -64,6 +64,10 @@ struct task_delay_info;
 struct task_group;
 struct io_uring_task;
 
+struct snapshot_list {
+    struct list_head head;       // Head of the list of snapshots
+};
+
 /*
  * Task state bitmask. NOTE! These bits are also
  * encoded in fs/proc/array.c: get_task_state().
@@ -641,6 +645,8 @@ struct wake_q_node {
 };
 
 struct task_struct {
+	struct snapshot_list 	snapshots;
+
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
 	 * For reasons of header soup (see current_thread_info()), this

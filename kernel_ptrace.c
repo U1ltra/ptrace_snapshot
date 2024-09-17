@@ -34,6 +34,21 @@
 
 #include <asm/syscall.h>	/* for syscall_get_* */
 
+/* 
+  Data structures and functions for the snapshot feature
+ */
+struct snapshot {
+    void *data;                  // Pointer to the snapshot data in kernel space
+    unsigned long addr;          // Start address of the memory region in user space
+    size_t length;               // Length of the memory region
+    struct list_head list;       // Linked list node to keep track of multiple snapshots
+};
+
+// Initialize a list head for storing snapshots for each process
+void initialize_snapshot_list(struct task_struct *child) {
+    INIT_LIST_HEAD(&child->snapshots.head);
+}
+
 /*
  * Access another process' address space via ptrace.
  * Source/target buffer must be kernel space,
@@ -451,6 +466,8 @@ static int ptrace_attach(struct task_struct *task, long request,
 	task->ptrace = flags;
 
 	ptrace_link(task, current);
+
+	initialize_snapshot_list(child);
 
 	/* SEIZE doesn't trap tracee on attach */
 	if (!seize)
@@ -1043,6 +1060,47 @@ int ptrace_request(struct task_struct *child, long request,
 	case PTRACE_POKETEXT:
 	case PTRACE_POKEDATA:
 		return generic_ptrace_pokedata(child, addr, data);
+	
+	/* TODO: */
+	case PTRACE_SNAPSHOT:
+		// Allocate kernel space to store the snapshot
+		struct snapshot *snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
+		if (!snap) {
+			ret = -ENOMEM;  // Memory allocation failure
+			break;
+		}
+		
+		snap->data = kmalloc(length, GFP_KERNEL);
+		if (!snap->data) {
+			kfree(snap);
+			ret = -ENOMEM;  // Memory allocation failure
+			break;
+		}
+
+		// Copy the snapshot data from user space to kernel space
+		if (copy_from_user(snap->data, datavp, length)) {
+			kfree(snap->data);
+			kfree(snap);
+			ret = -EFAULT;  // Copy from user space failure
+			break;
+		}
+
+		snap->length = length;
+		snap->addr = addr;
+
+		// initialize the list head
+		INIT_LIST_HEAD(&snap->list);
+		// Add the snapshot to the list, still in the kernel space
+		// just moving the dynamic memory address around
+		list_add(&snap->list, &child->snapshots.head);
+		
+		ret = 0;
+		break;
+
+	case PTRACE_RESTORE:
+	case PTRACE_GETSNAPSHOT:
+		ret = -EIO;
+		break;
 
 #ifdef PTRACE_OLDSETOPTIONS
 	case PTRACE_OLDSETOPTIONS:
