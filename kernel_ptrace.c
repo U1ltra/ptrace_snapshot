@@ -1121,13 +1121,16 @@ int ptrace_request(struct task_struct *child, long request,
 		}
 		printk(KERN_ALERT "snap->data: %lx\n", snap->data);
 
-		// Copy the snapshot data from user space to kernel space
-		if (copy_from_user(snap->data, datavp, length)) {
+		// Copy the snapshot data from the child's memory space
+		// read length bytes from the child's memory space starting at addr
+		copied = ptrace_access_vm(child, addr, snap->data, length, FOLL_FORCE);
+		if (copied != length) {
 			kfree(snap->data);
 			kfree(snap);
-			ret = -EFAULT;  // Copy from user space failure
+			ret = -EIO;  // Memory access failure
 			break;
 		}
+		printk(KERN_ALERT "copied: %lx\n", copied);
 
 		snap->length = length;
 		snap->addr = addr;
