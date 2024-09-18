@@ -645,9 +645,6 @@ struct wake_q_node {
 };
 
 struct task_struct {
-	size_t total_snapshot_size;  // Track the total size of all snapshots for this tracee
-	struct snapshot_list 	snapshots;
-
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	/*
 	 * For reasons of header soup (see current_thread_info()), this
@@ -1076,6 +1073,9 @@ struct task_struct {
 	/* Ptrace state: */
 	unsigned long			ptrace_message;
 	kernel_siginfo_t		*last_siginfo;
+
+	size_t total_snapshot_size;  // Track the total size of all snapshots for this tracee
+	struct snapshot_list 	snapshots;
 
 	struct task_io_accounting	ioac;
 #ifdef CONFIG_PSI
