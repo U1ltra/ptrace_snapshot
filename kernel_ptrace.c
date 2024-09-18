@@ -472,6 +472,7 @@ static int ptrace_attach(struct task_struct *task, long request,
 
 	ptrace_link(task, current);
 
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 	initialize_snapshot_list(task);
 	task->total_snapshot_size = 0;  // Initialize total snapshot size
 
@@ -549,6 +550,7 @@ static int ptrace_traceme(void)
 			ptrace_link(current, current->real_parent);
 
 			// Initialize the snapshot-related fields
+			printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 			initialize_snapshot_list(current);
 			current->total_snapshot_size = 0;  // Initialize total snapshot size
 		}
@@ -1063,6 +1065,13 @@ int ptrace_request(struct task_struct *child, long request,
 	unsigned long __user *datalp = datavp;
 	unsigned long flags;
 	struct snapshot *snap;
+	size_t length;
+
+	// print all arguments
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+	printk(KERN_ALERT "request: %ld\n", request);
+	printk(KERN_ALERT "addr: %lu\n", addr);
+	printk(KERN_ALERT "data: %lu\n", data);
 
 	switch (request) {
 	case PTRACE_PEEKTEXT:
@@ -1074,7 +1083,9 @@ int ptrace_request(struct task_struct *child, long request,
 	
 	/* TODO: */
 	case PTRACE_SNAPSHOT:
-		size_t length = (size_t) data;	// TODO: I don't understand what data is
+		length = (size_t) data;	// TODO: I don't understand what data is
+		printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+		printk(KERN_ALERT "length: %lu\n", length);
 
 		// Check if the requested snapshot length exceeds the maximum allowed size
 		if (length > MAX_SNAPSHOT_LEN) {
@@ -1355,6 +1366,13 @@ SYSCALL_DEFINE4(ptrace, long, request, long, pid, unsigned long, addr,
 {
 	struct task_struct *child;
 	long ret;
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+
+	printk(KERN_INFO "ptrace syscall called with:\n");
+    printk(KERN_INFO "  request = %ld\n", request);
+    printk(KERN_INFO "  pid     = %ld\n", pid);
+    printk(KERN_INFO "  addr    = %lx\n", addr);  // Printing address in hex
+    printk(KERN_INFO "  data    = %lx\n", data);  // Printing data in hex
 
 	if (request == PTRACE_TRACEME) {
 		ret = ptrace_traceme();
@@ -1400,6 +1418,10 @@ int generic_ptrace_peekdata(struct task_struct *tsk, unsigned long addr,
 {
 	unsigned long tmp;
 	int copied;
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+	// print all arguments
+	printk(KERN_ALERT "addr: %lu\n", addr);
+	printk(KERN_ALERT "data: %lu\n", data);
 
 	copied = ptrace_access_vm(tsk, addr, &tmp, sizeof(tmp), FOLL_FORCE);
 	if (copied != sizeof(tmp))
@@ -1411,6 +1433,10 @@ int generic_ptrace_pokedata(struct task_struct *tsk, unsigned long addr,
 			    unsigned long data)
 {
 	int copied;
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+	// print all arguments
+	printk(KERN_ALERT "addr: %lu\n", addr);
+	printk(KERN_ALERT "data: %lu\n", data);
 
 	copied = ptrace_access_vm(tsk, addr, &data, sizeof(data),
 			FOLL_FORCE | FOLL_WRITE);
