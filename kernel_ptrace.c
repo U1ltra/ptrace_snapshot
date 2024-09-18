@@ -51,6 +51,9 @@ struct snapshot {
 
 // Initialize a list head for storing snapshots for each process
 void initialize_snapshot_list(struct task_struct *child) {
+	printk(KERN_INFO "--- Initializing snapshot list for PID %d ---\n", child->pid);
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
+
     INIT_LIST_HEAD(&child->snapshots.head);
 }
 
@@ -416,6 +419,8 @@ static int ptrace_attach(struct task_struct *task, long request,
 {
 	bool seize = (request == PTRACE_SEIZE);
 	int retval;
+	printk(KERN_INFO "--- ptrace_attach ---");
+	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 
 	retval = -EIO;
 	if (seize) {
@@ -472,7 +477,6 @@ static int ptrace_attach(struct task_struct *task, long request,
 
 	ptrace_link(task, current);
 
-	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 	initialize_snapshot_list(task);
 	task->total_snapshot_size = 0;  // Initialize total snapshot size
 
@@ -535,6 +539,7 @@ out:
 static int ptrace_traceme(void)
 {
 	int ret = -EPERM;
+	printk(KERN_INFO "--- ptrace_traceme ---\n");
 
 	write_lock_irq(&tasklist_lock);
 	/* Are we already being traced? */
@@ -550,7 +555,6 @@ static int ptrace_traceme(void)
 			ptrace_link(current, current->real_parent);
 
 			// Initialize the snapshot-related fields
-			printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 			initialize_snapshot_list(current);
 			current->total_snapshot_size = 0;  // Initialize total snapshot size
 		}
@@ -1068,10 +1072,11 @@ int ptrace_request(struct task_struct *child, long request,
 	size_t length;
 
 	// print all arguments
+	printk(KERN_ALERT "--- ptrace_request ---\n");
 	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 	printk(KERN_ALERT "request: %ld\n", request);
-	printk(KERN_ALERT "addr: %lu\n", addr);
-	printk(KERN_ALERT "data: %lu\n", data);
+	printk(KERN_ALERT "addr: %lx\n", addr);
+	printk(KERN_ALERT "data: %lx\n", data);
 
 	switch (request) {
 	case PTRACE_PEEKTEXT:
@@ -1084,8 +1089,9 @@ int ptrace_request(struct task_struct *child, long request,
 	/* TODO: */
 	case PTRACE_SNAPSHOT:
 		length = (size_t) data;	// TODO: I don't understand what data is
+		printk(KERN_ALERT "--- PTRACE_SNAPSHOT ---\n");
 		printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
-		printk(KERN_ALERT "length: %lu\n", length);
+		printk(KERN_ALERT "length: %lx\n", length);
 
 		// Check if the requested snapshot length exceeds the maximum allowed size
 		if (length > MAX_SNAPSHOT_LEN) {
@@ -1097,6 +1103,7 @@ int ptrace_request(struct task_struct *child, long request,
 			ret = -ENOMEM;  // Total snapshot size limit exceeded
 			break;
 		}
+		printk(KERN_ALERT "child->total_snapshot_size: %lx\n", child->total_snapshot_size);
 
 		// Allocate kernel space to store the snapshot
 		snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
@@ -1104,6 +1111,7 @@ int ptrace_request(struct task_struct *child, long request,
 			ret = -ENOMEM;  // Memory allocation failure
 			break;
 		}
+		printk(KERN_ALERT "snap: %lx\n", snap);
 		
 		snap->data = kmalloc(length, GFP_KERNEL);
 		if (!snap->data) {
@@ -1111,6 +1119,7 @@ int ptrace_request(struct task_struct *child, long request,
 			ret = -ENOMEM;  // Memory allocation failure
 			break;
 		}
+		printk(KERN_ALERT "snap->data: %lx\n", snap->data);
 
 		// Copy the snapshot data from user space to kernel space
 		if (copy_from_user(snap->data, datavp, length)) {
@@ -1122,15 +1131,19 @@ int ptrace_request(struct task_struct *child, long request,
 
 		snap->length = length;
 		snap->addr = addr;
+		printk(KERN_ALERT "snap->length: %lx\n", snap->length);
+		printk(KERN_ALERT "snap->addr: %lx\n", snap->addr);
 
 		// initialize the list head
 		INIT_LIST_HEAD(&snap->list);
 		// Add the snapshot to the list, still in the kernel space
 		// just moving the dynamic memory address around
 		list_add(&snap->list, &child->snapshots.head);
+		printk(KERN_ALERT "snap->list: %lx\n", snap->list);
 
 		// Update the total snapshot size for the tracee
     	child->total_snapshot_size += length;
+		printk(KERN_ALERT "child->total_snapshot_size: %lx\n", child->total_snapshot_size);
 		
 		ret = 0;
 		break;
@@ -1366,6 +1379,7 @@ SYSCALL_DEFINE4(ptrace, long, request, long, pid, unsigned long, addr,
 {
 	struct task_struct *child;
 	long ret;
+	printk(KERN_ALERT "--- ptrace syscall ---\n");
 	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 
 	printk(KERN_INFO "ptrace syscall called with:\n");
@@ -1418,10 +1432,11 @@ int generic_ptrace_peekdata(struct task_struct *tsk, unsigned long addr,
 {
 	unsigned long tmp;
 	int copied;
+	printk(KERN_ALERT "--- generic_ptrace_peekdata ---\n");
 	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 	// print all arguments
-	printk(KERN_ALERT "addr: %lu\n", addr);
-	printk(KERN_ALERT "data: %lu\n", data);
+	printk(KERN_ALERT "addr: %lx\n", addr);
+	printk(KERN_ALERT "data: %lx\n", data);
 
 	copied = ptrace_access_vm(tsk, addr, &tmp, sizeof(tmp), FOLL_FORCE);
 	if (copied != sizeof(tmp))
@@ -1433,10 +1448,11 @@ int generic_ptrace_pokedata(struct task_struct *tsk, unsigned long addr,
 			    unsigned long data)
 {
 	int copied;
+	printk(KERN_ALERT "--- generic_ptrace_pokedata ---\n");
 	printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 	// print all arguments
-	printk(KERN_ALERT "addr: %lu\n", addr);
-	printk(KERN_ALERT "data: %lu\n", data);
+	printk(KERN_ALERT "addr: %lx\n", addr);
+	printk(KERN_ALERT "data: %lx\n", data);
 
 	copied = ptrace_access_vm(tsk, addr, &data, sizeof(data),
 			FOLL_FORCE | FOLL_WRITE);
