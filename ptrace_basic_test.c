@@ -69,6 +69,14 @@ int main() {
             }
             printf("Parent: Wrote word to child's stack (address %lx) = %lx\n", addr, data);
 
+            // Read a word from child's memory again
+            ret = ptrace(PTRACE_PEEKDATA, child_pid, (void *)addr, NULL);
+            if (ret == -1 && errno != 0) {
+                perror("ptrace PEEKDATA");
+                exit(EXIT_FAILURE);
+            }
+            printf("Parent: Read word again from child's stack (address %lx) = %lx\n", addr, ret);
+
             // Continue the child process
             if (ptrace(PTRACE_CONT, child_pid, NULL, NULL) == -1) {
                 perror("ptrace CONT");
