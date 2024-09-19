@@ -1070,6 +1070,7 @@ int ptrace_request(struct task_struct *child, long request,
 	unsigned long flags;
 	struct snapshot *snap;
 	size_t length;
+	int copied;
 
 	// print all arguments
 	printk(KERN_ALERT "--- ptrace_request ---\n");
@@ -1111,7 +1112,7 @@ int ptrace_request(struct task_struct *child, long request,
 			ret = -ENOMEM;  // Memory allocation failure
 			break;
 		}
-		printk(KERN_ALERT "snap: %lx\n", snap);
+		printk(KERN_ALERT "snap kmalloc\n");
 		
 		snap->data = kmalloc(length, GFP_KERNEL);
 		if (!snap->data) {
@@ -1119,18 +1120,19 @@ int ptrace_request(struct task_struct *child, long request,
 			ret = -ENOMEM;  // Memory allocation failure
 			break;
 		}
-		printk(KERN_ALERT "snap->data: %lx\n", snap->data);
+		printk(KERN_ALERT "snap->data kmalloc\n");
 
 		// Copy the snapshot data from the child's memory space
 		// read length bytes from the child's memory space starting at addr
 		copied = ptrace_access_vm(child, addr, snap->data, length, FOLL_FORCE);
+		printk(KERN_ALERT "copied: %x\n", copied);
 		if (copied != length) {
 			kfree(snap->data);
 			kfree(snap);
 			ret = -EIO;  // Memory access failure
 			break;
 		}
-		printk(KERN_ALERT "copied: %lx\n", copied);
+		printk(KERN_ALERT "snap->data copied\n");
 
 		snap->length = length;
 		snap->addr = addr;
@@ -1142,7 +1144,7 @@ int ptrace_request(struct task_struct *child, long request,
 		// Add the snapshot to the list, still in the kernel space
 		// just moving the dynamic memory address around
 		list_add(&snap->list, &child->snapshots.head);
-		printk(KERN_ALERT "snap->list: %lx\n", snap->list);
+		printk(KERN_ALERT "snap->list update\n");
 
 		// Update the total snapshot size for the tracee
     	child->total_snapshot_size += length;
