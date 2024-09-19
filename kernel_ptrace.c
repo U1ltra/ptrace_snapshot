@@ -595,8 +595,16 @@ static int ignoring_children(struct sighand_struct *sigh)
 static bool __ptrace_detach(struct task_struct *tracer, struct task_struct *p)
 {
 	bool dead;
+    struct snapshot *snap, *tmp;
 
 	__ptrace_unlink(p);
+
+	// Delete all snapshots associated with this tracee
+    list_for_each_entry_safe(snap, tmp, &p->snapshots.head, list) {
+        list_del(&snap->list);   // Remove the snapshot from the list
+        kfree(snap->data);       // Free the snapshot data
+        kfree(snap);             // Free the snapshot structure
+    }
 
 	if (p->exit_state != EXIT_ZOMBIE)
 		return false;
@@ -1184,6 +1192,21 @@ int ptrace_request(struct task_struct *child, long request,
 		printk(KERN_ALERT "snap->length: %lx\n", snap->length);
 		printk(KERN_ALERT "snap->addr: %lx\n", snap->addr);
 
+		// TODO: if the snapshot already exists for the same address, delete the old one
+		// Search for the snapshot corresponding to the given address
+		list_for_each_entry(tmp, &child->snapshots.head, list) {
+			if (addr >= tmp->addr && addr < tmp->addr + tmp->length) {
+				printk(KERN_ALERT "Snapshot already exists for the same address.\n");
+				printk(KERN_ALERT "Deleting the old snapshot.\n");
+				// Snapshot already exists for the same address
+				// Delete the old snapshot
+				list_del(&tmp->list);  // Remove the snapshot from the list
+				kfree(tmp->data);      // Free the snapshot data
+				kfree(tmp);            // Free the snapshot structure
+				break;
+			}
+		}
+
 		// Initialize the list head
 		INIT_LIST_HEAD(&snap->list);
 		// Add the snapshot to the list, still in the kernel space
@@ -1226,11 +1249,14 @@ int ptrace_request(struct task_struct *child, long request,
 
 		// Search for the snapshot corresponding to the given address
 		list_for_each_entry(tmp, &child->snapshots.head, list) {
-			if (tmp->addr == addr) {
+			// TODO: restore snapshot when the address falls within the range of a addr - addr + length
+			if (addr >= tmp->addr && addr < tmp->addr + tmp->length) {
 				snap = tmp;
 				break;
 			}
 		}
+
+		printk(KERN_ALERT "Snapshot found.\n");
 
 		if (!snap) {
 			ret = -ENOENT;  // No snapshot found for the specified address
@@ -1308,11 +1334,13 @@ int ptrace_request(struct task_struct *child, long request,
 
 		// Search for the snapshot corresponding to the given address (addr)
 		list_for_each_entry(tmp, &child->snapshots.head, list) {
-			if (tmp->addr == addr) {
+			if (addr >= tmp->addr && addr < tmp->addr + tmp->length) {
 				snap = tmp;
 				break;
 			}
 		}
+
+		printk(KERN_ALERT "Snapshot found.\n");
 
 		if (!snap) {
 			ret = -ENOENT;  // No snapshot found for the specified address
