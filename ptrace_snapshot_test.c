@@ -11,16 +11,31 @@
 
 #define SNAPSHOT_SIZE 64  // Size of the memory region to snapshot
 
-#pragma message "ptrace.h path: " __FILE__
+void read_memory_map(pid_t pid) {
+    char filename[256];
+    snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
+    
+    FILE *maps_file = fopen(filename, "r");
+    if (!maps_file) {
+        perror("fopen");
+        return;
+    }
+    
+    printf("Memory map of child process %d:\n", pid);
+    char line[256];
+    while (fgets(line, sizeof(line), maps_file)) {
+        printf("%s", line);  // Print the memory map line by line
+    }
+    fclose(maps_file);
+}
 
 int main() {
     pid_t child_pid;
     long ret;
     int status;
-    unsigned char original_data[SNAPSHOT_SIZE];
-    unsigned char snapshot_data[SNAPSHOT_SIZE];
     unsigned long target_addr;
     struct user_regs_struct regs;
+    unsigned long data;
 
     // Fork the child process
     child_pid = fork();
@@ -72,6 +87,20 @@ int main() {
         if (WIFSTOPPED(status)) {
             printf("Parent: Child stopped, now attaching...\n");
 
+            // Read the memory map of the child process
+            read_memory_map(child_pid);
+
+            // poke the child process
+            printf("Parent: Enter the target address of the memory region to poke: ");
+            scanf("%lx", &target_addr);
+            data = 0x12345678; // Example data
+            ret = ptrace(PTRACE_POKEDATA, child_pid, (void *)target_addr, (void *)data);
+            if (ret == -1) {
+                perror("ptrace POKEDATA");
+                exit(EXIT_FAILURE);
+            }
+            printf("Parent: Wrote word to child's stack (address %lx) = %lx\n", target_addr, data);
+
             // Read the address of the target memory region from user input
             printf("Enter the target address of the memory region to snapshot: ");
             scanf("%lx", &target_addr);
@@ -86,13 +115,6 @@ int main() {
             }
 
             printf("Parent: Snapshot 1 taken successfully.\n");
-            
-            ret = ptrace(PTRACE_SNAPSHOT, child_pid, (void *)regs.sp, 8);
-            if (ret == -1) {
-                perror("ptrace SNAPSHOT");
-                exit(EXIT_FAILURE);
-            }
-            printf("Parent: Snapshot 2 taken successfully.\n");
 
             // Detach from the child process
             if (ptrace(PTRACE_DETACH, child_pid, NULL, NULL) == -1) {
