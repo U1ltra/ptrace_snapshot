@@ -60,3 +60,43 @@ fuck this is just sometimes work while sometimes does not.
 sometimes shift works, sometimes esc works, sometimes nothing works. my god
 
 OK, 确实是sched.h的问题。改回原来的code之后compile就work了
+
+把 snapshot_list 和 limit size declare 的位置移动了一下。
+再compile之后就可以boot modified之后的 linux 5.10.224  了。
+重新跑了一下basic test program，结果正常
+```
+0
+kernel.yama.ptrace_scope = 0
+Child process (PID = 2475) running...
+Parent: Child stopped after attach. Testing ptrace...
+Parent: Read word from child's stack (address fffff35a3860) = fffff35a3970
+Parent: Wrote word to child's stack (address fffff35a3860) = 12345678
+Child: Count = 0
+Child: Count = 1
+Child: Count = 2
+Child: Count = 3
+Child: Count = 4
+Parent: Child exited with status 0.
+```
+
+```
+sudo make headers_install
+sudo make headers_install INSTALL_HDR_PATH=/usr
+```
+
+```
+gcc -g -o ptrace_snapshot_test ptrace_snapshot_test.c # -g for list command debugging in gdb
+```
+
+The output of printk() goes to the kernel log buffer, which can be viewed with the dmesg command or in /var/log/kern.log. 
+
+Clearing the kernel ring buffer with dmesg -C only affects the current session's view of the kernel logs, and the logs will still be stored in the system log files like /var/log/kern.log if you have persistent logging enabled.
+```
+sudo dmesg | tail -n 50
+
+sudo dmesg -C # clear the log for the current session
+```
+
+testcase
+16^5 address
+64 bytes
