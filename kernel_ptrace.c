@@ -1068,9 +1068,11 @@ int ptrace_request(struct task_struct *child, long request,
 	void __user *datavp = (void __user *) data;
 	unsigned long __user *datalp = datavp;
 	unsigned long flags;
-	struct snapshot *snap;
+	struct snapshot *snap, *tmp;
+	unsigned char *snap_data, *snap_data_tmp;
 	size_t length;
 	int copied;
+	unsigned char i;
 
 	// print all arguments
 	printk(KERN_ALERT "--- ptrace_request ---\n");
@@ -1089,7 +1091,7 @@ int ptrace_request(struct task_struct *child, long request,
 	
 	/* TODO: */
 	case PTRACE_SNAPSHOT:
-		length = (size_t) data;	// TODO: I don't understand what data is
+		length = (size_t) data;	// Assuming 'data' is the length of the memory region
 		printk(KERN_ALERT "--- PTRACE_SNAPSHOT ---\n");
 		printk(KERN_ALERT "Reached line %d in function %s\n", __LINE__, __func__);
 		printk(KERN_ALERT "length: %lx\n", length);
@@ -1106,6 +1108,48 @@ int ptrace_request(struct task_struct *child, long request,
 		}
 		printk(KERN_ALERT "child->total_snapshot_size: %lx\n", child->total_snapshot_size);
 
+		// Check if the memory region is valid and writable
+		{
+			struct mm_struct *mm;
+			struct vm_area_struct *vma;
+
+			// Get the memory management structure of the tracee
+			mm = get_task_mm(child);
+			if (!mm) {
+				ret = -EINVAL;  // No memory management structure (e.g., kernel threads)
+				break;
+			}
+
+			// Lock the memory to safely access the VMAs (using mmap semaphore)
+			down_read(&mm->mmap_lock);
+
+			// Find the VMA that contains the start address 'addr'
+			vma = find_vma(mm, addr);
+			printk(KERN_ALERT "vma->vm_start: %lx\n", vma->vm_start);
+			printk(KERN_ALERT "vma->vm_end: %lx\n", vma->vm_end);
+			if (!vma || addr < vma->vm_start || addr + length > vma->vm_end) {
+				// Invalid memory range
+				up_read(&mm->mmap_lock);
+				ret = -EFAULT;  // Invalid memory range
+				break;
+			}
+
+			// Check if the VMA is writable
+			printk(KERN_ALERT "vma->vm_flags: %lx\n", vma->vm_flags);
+			printk(KERN_ALERT "vma->vm_flags & VM_WRITE: %lx\n", vma->vm_flags & VM_WRITE);
+			if (!(vma->vm_flags & VM_WRITE)) {
+				// Memory region is not writable
+				up_read(&mm->mmap_lock);
+				ret = -EACCES;  // Access denied
+				break;
+			}
+
+			// Release the mmap semaphore
+			up_read(&mm->mmap_lock);
+		}
+
+		printk(KERN_ALERT "Memory region is valid and writable.\n");
+
 		// Allocate kernel space to store the snapshot
 		snap = kmalloc(sizeof(struct snapshot), GFP_KERNEL);
 		if (!snap) {
@@ -1113,7 +1157,7 @@ int ptrace_request(struct task_struct *child, long request,
 			break;
 		}
 		printk(KERN_ALERT "snap kmalloc\n");
-		
+
 		snap->data = kmalloc(length, GFP_KERNEL);
 		if (!snap->data) {
 			kfree(snap);
@@ -1133,13 +1177,14 @@ int ptrace_request(struct task_struct *child, long request,
 			break;
 		}
 		printk(KERN_ALERT "snap->data copied\n");
+		
 
 		snap->length = length;
 		snap->addr = addr;
 		printk(KERN_ALERT "snap->length: %lx\n", snap->length);
 		printk(KERN_ALERT "snap->addr: %lx\n", snap->addr);
 
-		// initialize the list head
+		// Initialize the list head
 		INIT_LIST_HEAD(&snap->list);
 		// Add the snapshot to the list, still in the kernel space
 		// just moving the dynamic memory address around
@@ -1149,6 +1194,22 @@ int ptrace_request(struct task_struct *child, long request,
 		// Update the total snapshot size for the tracee
     	child->total_snapshot_size += length;
 		printk(KERN_ALERT "child->total_snapshot_size: %lx\n", child->total_snapshot_size);
+
+		// print the snapshot data
+		snap_data = (unsigned char *)snap->data;
+		for (i = 0; i < length; i++) {
+			printk(KERN_ALERT "snap->data[%d]: %x\n", i, snap_data[i]);
+		}
+		// print the snapshot list
+		list_for_each_entry(tmp, &child->snapshots.head, list) {
+			printk(KERN_ALERT "tmp->length: %lx\n", tmp->length);
+			printk(KERN_ALERT "tmp->addr: %lx\n", tmp->addr);
+
+			snap_data_tmp = (unsigned char *)tmp->data;
+			for (i = 0; i < tmp->length; i++) {
+				printk(KERN_ALERT "tmp->data[%d]: %x\n", i, snap_data_tmp[i]);
+			}
+		}
 		
 		ret = 0;
 		break;
