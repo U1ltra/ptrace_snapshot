@@ -588,3 +588,56 @@ ff be ad de 00 00 00 00 07 bf ad de 00 00 00 00
 Parent: Detached from child.
 Child: Address of test memory = 0xaaaaf1cce6b0
 ```
+
+
+```
+ubuntu@ubuntu:~/Documents/testcases$ bash script.sh 
+0
+kernel.yama.ptrace_scope = 0
+
+<<< test1 >>>
+Child process (PID = 10757) running...
+Parent: Child stopped, now attaching...
+Memory map of child process 10757:
+aaaae8350000-aaaae8352000 r-xp 00000000 fd:00 2097181                    /home/ubuntu/Documents/testcases/ptrace_test1
+aaaae8361000-aaaae8362000 r--p 00001000 fd:00 2097181                    /home/ubuntu/Documents/testcases/ptrace_test1
+aaaae8362000-aaaae8363000 rw-p 00002000 fd:00 2097181                    /home/ubuntu/Documents/testcases/ptrace_test1
+aaab27b2d000-aaab27b4e000 rw-p 00000000 00:00 0                          [heap]
+ffffa0d10000-ffffa0e98000 r-xp 00000000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffa0e98000-ffffa0ea7000 ---p 00188000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffa0ea7000-ffffa0eab000 r--p 00187000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffa0eab000-ffffa0ead000 rw-p 0018b000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffa0ead000-ffffa0eb9000 rw-p 00000000 00:00 0 
+ffffa0ed7000-ffffa0f02000 r-xp 00000000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffa0f0c000-ffffa0f0e000 rw-p 00000000 00:00 0 
+ffffa0f0e000-ffffa0f10000 r--p 00000000 00:00 0                          [vvar]
+ffffa0f10000-ffffa0f11000 r-xp 00000000 00:00 0                          [vdso]
+ffffa0f11000-ffffa0f13000 r--p 0002a000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffa0f13000-ffffa0f15000 rw-p 0002c000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffdf6c4000-ffffdf6e5000 rw-p 00000000 00:00 0                          [stack]
+Enter the target address of the memory region to snapshot: aaab27b2d000
+Parent: Wrote new data (v1) to memory region.
+Parent: Taking snapshot...
+Parent: Snapshot (v1) taken successfully.
+Parent: Wrote new data (v2) to memory region.
+Parent: Snapshot (v2) taken successfully.
+Parent: Wrote bad data to memory region.
+Parent: Snapshot data read back (v2):
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+Parent: Bad data:
+ad db ba ad db ba 00 00 ad db ba ad db ba 00 00 
+ad db ba ad db ba 00 00 ad db ba ad db ba 00 00 
+ad db ba ad db ba 00 00 ad db ba ad db ba 00 00 
+ad db ba ad db ba 00 00 ad db ba ad db ba 00 00 
+Parent: Restored snapshot (v2).
+Parent: Restored data:
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+43 65 87 a9 00 00 00 00 43 65 87 a9 00 00 00 00 
+Parent: Detached from child.
+Child: Address of test memory = 0xaaab27b2d700
+```
