@@ -1299,8 +1299,44 @@ int ptrace_request(struct task_struct *child, long request,
 		break;
 	}
 	case PTRACE_GETSNAPSHOT:
-		ret = -EIO;
+	{
+		struct snapshot *snap = NULL;
+		struct snapshot *tmp;
+		void __user *user_buf = (void __user *)data;  // User-provided buffer address
+
+		printk(KERN_ALERT "--- PTRACE_GETSNAPSHOT ---\n");
+
+		// Search for the snapshot corresponding to the given address (addr)
+		list_for_each_entry(tmp, &child->snapshots.head, list) {
+			if (tmp->addr == addr) {
+				snap = tmp;
+				break;
+			}
+		}
+
+		if (!snap) {
+			ret = -ENOENT;  // No snapshot found for the specified address
+			break;
+		}
+
+		// Ensure the snapshot length is not larger than the user-provided buffer
+		// Here, length is already stored in snap->length
+		printk(KERN_ALERT "Snapshot addr: %lx\n", snap->addr);
+		printk(KERN_ALERT "Snapshot length: %lu\n", snap->length);
+
+		// Copy the snapshot data from kernel space to user space
+		if (copy_to_user(user_buf, snap->data, snap->length)) {
+			ret = -EFAULT;  // Failed to copy data to user space
+			break;
+		}
+
+		printk(KERN_ALERT "PTRACE_GETSNAPSHOT: Snapshot data copied to user buffer.\n");
+
+		// Successfully copied the snapshot to the user buffer
+		ret = 0;
 		break;
+	}
+
 
 #ifdef PTRACE_OLDSETOPTIONS
 	case PTRACE_OLDSETOPTIONS:
