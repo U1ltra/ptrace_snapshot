@@ -1089,7 +1089,7 @@ int ptrace_request(struct task_struct *child, long request,
 	case PTRACE_POKEDATA:
 		return generic_ptrace_pokedata(child, addr, data);
 	
-	/* TODO: */
+	/* TODO: check the multiple snapshot case */
 	case PTRACE_SNAPSHOT:
 		length = (size_t) data;	// Assuming 'data' is the length of the memory region
 		printk(KERN_ALERT "--- PTRACE_SNAPSHOT ---\n");
@@ -1215,6 +1215,89 @@ int ptrace_request(struct task_struct *child, long request,
 		break;
 
 	case PTRACE_RESTORE:
+	{
+		struct snapshot *snap = NULL;
+		struct snapshot *tmp;
+		struct mm_struct *mm;
+		struct vm_area_struct *vma;
+		int copied;
+
+		printk(KERN_ALERT "--- PTRACE_RESTORE ---\n");
+
+		// Search for the snapshot corresponding to the given address
+		list_for_each_entry(tmp, &child->snapshots.head, list) {
+			if (tmp->addr == addr) {
+				snap = tmp;
+				break;
+			}
+		}
+
+		if (!snap) {
+			ret = -ENOENT;  // No snapshot found for the specified address
+			break;
+		}
+
+		printk(KERN_ALERT "snap->addr: %lx\n", snap->addr);
+		printk(KERN_ALERT "snap->length: %lx\n", snap->length);
+
+		{
+			// Get the memory management structure of the tracee
+			mm = get_task_mm(child);
+			if (!mm) {
+				ret = -EINVAL;  // No memory management structure (e.g., kernel threads)
+				break;
+			}
+
+			// Lock the memory to safely access the VMAs (using mmap semaphore)
+			down_read(&mm->mmap_lock);
+
+			// Find the VMA that contains the start address 'addr'
+			vma = find_vma(mm, addr);
+			if (!vma || addr < vma->vm_start || addr + snap->length > vma->vm_end) {
+				// Invalid memory range
+				up_read(&mm->mmap_lock);
+				ret = -EFAULT;  // Invalid memory range
+				break;
+			}
+
+			// Check if the VMA is writable
+			if (!(vma->vm_flags & VM_WRITE)) {
+				// Memory region is not writable
+				up_read(&mm->mmap_lock);
+				ret = -EACCES;  // Access denied
+				break;
+			}
+
+			// Release the mmap semaphore
+			up_read(&mm->mmap_lock);
+		}
+
+		printk(KERN_ALERT "Memory region is valid and writable.\n");
+
+		// Now write the snapshot data back to the tracee's memory space
+		copied = ptrace_access_vm(child, addr, snap->data, snap->length, 
+			FOLL_FORCE | FOLL_WRITE);
+
+		printk(KERN_ALERT "copied: %x\n", copied);
+
+		if (copied != snap->length) {
+			ret = -EIO;  // Memory write failure
+			break;
+		}
+
+		printk(KERN_ALERT "PTRACE_RESTORE completed for address %lx\n", addr);
+
+		// TODO: verify if the deletion is successful
+		// Successfully restored, now delete the snapshot
+		list_del(&snap->list);  // Remove the snapshot from the list 
+		kfree(snap->data);      // Free the memory used for snapshot data
+		kfree(snap);            // Free the snapshot structure itself
+
+		printk(KERN_ALERT "Snapshot deleted after restore.\n");
+
+		ret = 0;
+		break;
+	}
 	case PTRACE_GETSNAPSHOT:
 		ret = -EIO;
 		break;
