@@ -541,3 +541,50 @@ Memory at 0xffffec55f038: 0x0
 Parent: Detached from child.
 Child: Address of test_memory = 0xaaaae8ab76b0
 ```
+
+PTRACE_GETSNAPSHOT working
+```
+ubuntu@ubuntu:~/Documents/testcases$ bash script.sh 
+0
+kernel.yama.ptrace_scope = 0
+Child process (PID = 2513) running...
+Parent: Child stopped, now attaching...
+Memory map of child process 2513:
+aaaab4ef0000-aaaab4ef2000 r-xp 00000000 fd:00 2097162                    /home/ubuntu/Documents/testcases/ptrace_get_test
+aaaab4f01000-aaaab4f02000 r--p 00001000 fd:00 2097162                    /home/ubuntu/Documents/testcases/ptrace_get_test
+aaaab4f02000-aaaab4f03000 rw-p 00002000 fd:00 2097162                    /home/ubuntu/Documents/testcases/ptrace_get_test
+aaaaf1cce000-aaaaf1cef000 rw-p 00000000 00:00 0                          [heap]
+ffffbaad0000-ffffbac58000 r-xp 00000000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffbac58000-ffffbac67000 ---p 00188000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffbac67000-ffffbac6b000 r--p 00187000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffbac6b000-ffffbac6d000 rw-p 0018b000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffffbac6d000-ffffbac79000 rw-p 00000000 00:00 0 
+ffffbac96000-ffffbacc1000 r-xp 00000000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffbaccb000-ffffbaccd000 rw-p 00000000 00:00 0 
+ffffbaccd000-ffffbaccf000 r--p 00000000 00:00 0                          [vvar]
+ffffbaccf000-ffffbacd0000 r-xp 00000000 00:00 0                          [vdso]
+ffffbacd0000-ffffbacd2000 r--p 0002a000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffbacd2000-ffffbacd4000 rw-p 0002c000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffc7437000-ffffc7458000 rw-p 00000000 00:00 0                          [stack]
+Enter the target address of the memory region to snapshot: 0xffffc7438000
+Parent: Writing values to the child's memory using PTRACE_POKEDATA...
+Parent: Wrote deadbeef to child's memory at address ffffc7438000
+Parent: Wrote deadbef7 to child's memory at address ffffc7438008
+Parent: Wrote deadbeff to child's memory at address ffffc7438010
+Parent: Wrote deadbf07 to child's memory at address ffffc7438018
+Parent: Wrote deadbf0f to child's memory at address ffffc7438020
+Parent: Wrote deadbf17 to child's memory at address ffffc7438028
+Parent: Wrote deadbf1f to child's memory at address ffffc7438030
+Parent: Wrote deadbf27 to child's memory at address ffffc7438038
+Parent: Child stopped after attach. Taking snapshot...
+Parent: Snapshot taken successfully.
+Parent: Retrieving snapshot...
+Parent: Snapshot data retrieved:
+ef be ad de 00 00 00 00 f7 be ad de 00 00 00 00 
+ff be ad de 00 00 00 00 07 bf ad de 00 00 00 00 
+0f bf ad de 00 00 00 00 17 bf ad de 00 00 00 00 
+1f bf ad de 00 00 00 00 27 bf ad de 00 00 00 00 
+
+Parent: Detached from child.
+Child: Address of test memory = 0xaaaaf1cce6b0
+```
