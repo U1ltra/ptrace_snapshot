@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ptrace.h>
+#include <linux/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/user.h>
@@ -10,6 +11,8 @@
 
 #define SNAPSHOT_SIZE 64  // Size of the memory region to snapshot
 
+#pragma message "ptrace.h path: " __FILE__
+
 int main() {
     pid_t child_pid;
     long ret;
@@ -17,6 +20,7 @@ int main() {
     unsigned char original_data[SNAPSHOT_SIZE];
     unsigned char snapshot_data[SNAPSHOT_SIZE];
     unsigned long target_addr;
+    struct user_regs_struct regs;
 
     // Fork the child process
     child_pid = fork();
@@ -72,7 +76,6 @@ int main() {
             printf("Enter the target address of the memory region to snapshot: ");
             scanf("%lx", &target_addr);
 
-
             printf("Parent: Child stopped after attach. Taking snapshot...\n");
 
             // Perform PTRACE_SNAPSHOT
@@ -82,7 +85,14 @@ int main() {
                 exit(EXIT_FAILURE);
             }
 
-            printf("Parent: Snapshot taken successfully.\n");
+            printf("Parent: Snapshot 1 taken successfully.\n");
+            
+            ret = ptrace(PTRACE_SNAPSHOT, child_pid, (void *)regs.sp, 8);
+            if (ret == -1) {
+                perror("ptrace SNAPSHOT");
+                exit(EXIT_FAILURE);
+            }
+            printf("Parent: Snapshot 2 taken successfully.\n");
 
             // Detach from the child process
             if (ptrace(PTRACE_DETACH, child_pid, NULL, NULL) == -1) {
