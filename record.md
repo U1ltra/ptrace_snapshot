@@ -487,3 +487,57 @@ ubuntu@ubuntu:~/Documents/testcases$ sudo dmesg | tail -n 200
 [  314.480248] addr: 0
 [  314.480573] data: 0
 ```
+
+restore works
+```
+ubuntu@ubuntu:~/Documents/testcases$ bash script.sh 
+1
+[sudo] password for ubuntu: 
+kernel.yama.ptrace_scope = 0
+Child process (PID = 2219) running...
+Parent: Child stopped, now attaching...
+Memory map of child process 2219:
+aaaac4cd0000-aaaac4cd2000 r-xp 00000000 fd:00 2097156                    /home/ubuntu/Documents/testcases/ptrace_restore_test
+aaaac4ce1000-aaaac4ce2000 r--p 00001000 fd:00 2097156                    /home/ubuntu/Documents/testcases/ptrace_restore_test
+aaaac4ce2000-aaaac4ce3000 rw-p 00002000 fd:00 2097156                    /home/ubuntu/Documents/testcases/ptrace_restore_test
+aaaae8ab7000-aaaae8ad8000 rw-p 00000000 00:00 0                          [heap]
+ffff9c440000-ffff9c5c8000 r-xp 00000000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffff9c5c8000-ffff9c5d7000 ---p 00188000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffff9c5d7000-ffff9c5db000 r--p 00187000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffff9c5db000-ffff9c5dd000 rw-p 0018b000 fd:00 450100                     /usr/lib/aarch64-linux-gnu/libc.so.6
+ffff9c5dd000-ffff9c5e9000 rw-p 00000000 00:00 0 
+ffff9c601000-ffff9c62c000 r-xp 00000000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffff9c636000-ffff9c638000 rw-p 00000000 00:00 0 
+ffff9c638000-ffff9c63a000 r--p 00000000 00:00 0                          [vvar]
+ffff9c63a000-ffff9c63b000 r-xp 00000000 00:00 0                          [vdso]
+ffff9c63b000-ffff9c63d000 r--p 0002a000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffff9c63d000-ffff9c63f000 rw-p 0002c000 fd:00 450039                     /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+ffffec55e000-ffffec57f000 rw-p 00000000 00:00 0                          [stack]
+Parent: Enter the target address of the memory region to snapshot: ffffec55f000
+Parent: Taking snapshot of memory at address 0xffffec55f000...
+Parent: Snapshot taken successfully.
+Parent: Modifying child's memory at address 0xffffec55f000...
+Parent: Child's memory modified.
+Parent: Verifying modified memory...
+Memory at 0xffffec55f000: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f008: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f010: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f018: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f020: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f028: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f030: 0xaaaaaaaaaaaaaaaa
+Memory at 0xffffec55f038: 0xaaaaaaaaaaaaaaaa
+Parent: Restoring snapshot at address 0xffffec55f000...
+Parent: Snapshot restored successfully.
+Parent: Verifying restored memory...
+Memory at 0xffffec55f000: 0x0
+Memory at 0xffffec55f008: 0x0
+Memory at 0xffffec55f010: 0x0
+Memory at 0xffffec55f018: 0x0
+Memory at 0xffffec55f020: 0x0
+Memory at 0xffffec55f028: 0x0
+Memory at 0xffffec55f030: 0x0
+Memory at 0xffffec55f038: 0x0
+Parent: Detached from child.
+Child: Address of test_memory = 0xaaaae8ab76b0
+```
